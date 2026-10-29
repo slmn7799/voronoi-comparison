@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Voronoi: Sweep-Line vs Divide-and-Conquer</title>
+  <meta name="description" content="Fortune's sweep-line and divide-and-conquer Voronoi constructions, visualized step by step.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap">
+      <p class="kicker">Computational Geometry</p>
+      <h1>Voronoi diagrams, two ways</h1>
+      <p class="lede">Fortune's sweep-line algorithm and a divide-and-conquer construction compute the same partition of the plane with very different strategies. Step through each one below, or click the canvas to add your own points.</p>
+      <nav class="tabs" role="tablist">
+        <button role="tab" class="tab active" data-view="fortune">Sweep-line</button>
+        <button role="tab" class="tab" data-view="dc">Divide &amp; conquer</button>
+        <button role="tab" class="tab" data-view="compare">Side by side</button>
+        <button role="tab" class="tab" data-view="tests">Correctness tests</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- shared point controls -->
+    <section class="toolbar" id="toolbar">
+      <label>Points <input type="number" id="nPoints" min="2" max="200" value="24"></label>
+      <label>Seed <input type="number" id="seed" value="42"></label>
+      <button id="btnRandom" class="btn">New random set</button>
+      <button id="btnClear" class="btn ghost">Clear</button>
+      <span class="hint">Click the canvas to add a point.</span>
+    </section>
+
+    <!-- Fortune -->
+    <section class="view active" id="view-fortune">
+      <div class="stage">
+        <div class="canvas-box"><canvas id="cvFortune"></canvas></div>
+        <aside class="panel">
+          <h2>Fortune's sweep-line</h2>
+          <p class="explain">The sweep line moves down. Each arc of the <span class="sw beach"></span>beach line is a parabola with a site as its focus. Breakpoints between arcs trace <span class="sw edge"></span>Voronoi edges; when an arc shrinks to nothing, a <span class="sw vert"></span>vertex appears.</p>
+          <div class="controls">
+            <button class="btn" id="fPrev" title="Previous event">◀ Event</button>
+            <button class="btn primary" id="fPlay">Play</button>
+            <button class="btn" id="fNext" title="Next event">Event ▶</button>
+          </div>
+          <input type="range" id="fSlider" min="0" max="1000" value="0" step="1" aria-label="Sweep line position">
+          <label class="row">Speed <input type="range" id="fSpeed" min="20" max="600" value="140"></label>
+          <div class="readout" id="fInfo"></div>
+          <div class="toggles">
+            <label><input type="checkbox" id="fCircles" checked> Pending circle events</label>
+            <label><input type="checkbox" id="fFinal"> Ghost of final diagram</label>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Divide and conquer -->
+    <section class="view" id="view-dc">
+      <div class="stage">
+        <div class="canvas-box"><canvas id="cvDC"></canvas></div>
+        <aside class="panel">
+          <h2>Divide &amp; conquer</h2>
+          <p class="explain">Sites are sorted by x and split at the median. Each half is solved recursively, then the <span class="sw left"></span>left and <span class="sw right"></span>right diagrams are merged by tracing the <span class="sw chain"></span>dividing chain between them.</p>
+          <div class="recbar" id="recBar"></div>
+          <div class="controls">
+            <button class="btn" id="dPrev">◀ Step</button>
+            <button class="btn primary" id="dPlay">Play</button>
+            <button class="btn" id="dNext">Step ▶</button>
+          </div>
+          <input type="range" id="dSlider" min="0" max="0" value="0" step="1" aria-label="Step">
+          <label class="row">Speed <input type="range" id="dSpeed" min="1" max="12" value="3"></label>
+          <div class="readout" id="dInfo"></div>
+          <div class="toggles">
+            <label><input type="checkbox" id="dDelaunay"> Show Delaunay dual</label>
+            <label><input type="checkbox" id="dFaded" checked> Fade sites outside the subproblem</label>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Compare -->
+    <section class="view" id="view-compare">
+      <div class="compare-grid">
+        <figure>
+          <figcaption>Fortune's sweep-line</figcaption>
+          <div class="canvas-box"><canvas id="cvCmpF"></canvas></div>
+        </figure>
+        <figure>
+          <figcaption>Divide &amp; conquer</figcaption>
+          <div class="canvas-box"><canvas id="cvCmpD"></canvas></div>
+        </figure>
+      </div>
+      <div class="stats" id="cmpStats"></div>
+      <p class="note">Single-run timings on this point set, for a quick sanity check.</p>
+    </section>
+
+    <!-- Tests -->
+    <section class="view" id="view-tests">
+      <div class="tests-head">
+        <div>
+          <h2>Correctness tests</h2>
+          <p class="explain">Each case checks that both algorithms find the same neighbouring sites, that they match an independent O(n³) brute-force test for small inputs, that every Voronoi vertex is equidistant from its three sites, and that every edge lies on the right bisector. Degenerate inputs (collinear, co-circular, shared y) are included.</p>
+        </div>
+        <button class="btn primary" id="btnTests">Run tests</button>
+      </div>
+      <div id="testSummary" class="test-summary"></div>
+      <table class="results" id="testTable" hidden>
+        <thead><tr><th>Case</th><th>n</th><th>Edges</th><th>Result</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+
+  <script src="js/geometry.js"></script>
+  <script src="js/dc.js"></script>
+  <script src="js/fortune.js"></script>
+  <script src="js/verify.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
